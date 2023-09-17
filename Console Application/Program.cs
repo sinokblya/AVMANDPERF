@@ -7,30 +7,28 @@ class Program
 {
     static void Main()
     {
-        using (NamedPipeServerStream pipeServer = new NamedPipeServerStream("MyPipe", PipeDirection.InOut))
+        using (NamedPipeClientStream pipeClient = new NamedPipeClientStream(".", "MyPipe", PipeDirection.InOut))
         {
-            Console.WriteLine("Сервер ожидает подключения...");
-            pipeServer.WaitForConnection();
+            Console.WriteLine("Подключение к серверу...");
+            pipeClient.Connect();
 
-            Console.WriteLine("Клиент подключен.");
+            Console.WriteLine("Сервер подключен.");
 
-            // Чтение данных от клиента
-            byte[] buffer = new byte[256];
-            int bytesRead = pipeServer.Read(buffer, 0, buffer.Length);
+            // Отправка данных серверу
+            string message = Console.ReadLine();
+            byte[] buffer = Encoding.UTF8.GetBytes(message);
+            pipeClient.Write(buffer, 0, buffer.Length);
 
-            string message = Encoding.UTF8.GetString(buffer, 0, bytesRead);
-            Console.WriteLine("Получено от клиента: " + message);
+            pipeClient.WaitForPipeDrain();
 
-            // Отправка ответа клиенту
-            string response = "Сообщение получено на сервере.";
-            byte[] responseBuffer = Encoding.UTF8.GetBytes(response);
-            pipeServer.Write(responseBuffer, 0, responseBuffer.Length);
+            // Чтение ответа от сервера
+            byte[] responseBuffer = new byte[256];
+            int bytesRead = pipeClient.Read(responseBuffer, 0, responseBuffer.Length);
 
-            Console.WriteLine("Ответ отправлен клиенту.");
-
-            pipeServer.WaitForPipeDrain();
+            string response = Encoding.UTF8.GetString(responseBuffer, 0, bytesRead);
+            Console.WriteLine("Получено от сервера: " + response);
         }
 
-        Console.WriteLine("Сервер завершил работу.");
+        Console.WriteLine("Клиент завершил работу.");
     }
 }
